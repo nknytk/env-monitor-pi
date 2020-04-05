@@ -1,0 +1,167 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="UTF-8"/>
+<title>環境モニタ</title>
+<link rel="stylesheet" href="https://stackpath.bootstrapcdn.com/bootstrap/4.3.1/css/bootstrap.min.css" integrity="sha384-ggOyR0iXCbMQv3Xipma34MD+dH/1fQ784/j6cY/iJTQUOhcWr7x9JvoRxT2MZw1T" crossorigin="anonymous"/>
+<script src="https://code.jquery.com/jquery-3.3.1.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/popper.js/1.14.7/umd/popper.min.js" integrity="sha384-UO2eT0CpHqdSJQ6hJty5KVphtPhzWj9WO1clHTMGa3JDZwrnQq4sF86dIHNDz0W1" crossorigin="anonymous"></script>
+<script src="https://stackpath.bootstrapcdn.com/bootstrap/4.3.1/js/bootstrap.min.js" integrity="sha384-JjSmVgyd0p3pXB1rRibZUAYoIIy6OrQ6VrjIEaFf/nJGzIxFDsf4x0xIM+B07jRM" crossorigin="anonymous"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/2.9.3/Chart.bundle.min.js"></script>
+<style>
+.dark {
+  background-color: #2F2F2F;
+  color: #FFFFFF;
+}
+.header-row {
+  margin: 10px;
+  border-bottom: 1px solid;
+}
+.content-row {
+  margin-left: 10px;
+  margin-right: 10px;
+  background-color: #F0F0F0;
+}
+</style>
+</head>
+<body class="dark">
+  <div class="container-fluid">
+    <!-- header -->
+    <div class="row header-row">
+      <div class="col-md-3">
+        <h3><span id="latest-time"></span></h3>
+      </div>
+      <div class="col-md-3">
+        <h3>CO2: <span id="latest-co2"></span>ppm</h3>
+      </div>
+      <div class="col-md-3">
+        <h3>気温: <span id="latest-temperature"></span>℃</h3>
+      </div>
+      <div class="col-md-3">
+        <h3>湿度: <span id="latest-humidity"></span>%</h3>
+      </div>
+    </div>
+    <!-- graphs -->
+    <div class="row content-row"><canvas class="graph" id="co2" width="100%" height="700px"></canvas></div>
+    <div class="row content-row"><canvas class="graph" id="temperature" width="100%" height="700px"></canvas></div>
+    <div class="row content-row"><canvas class="graph" id="humidity" width="100%" height="700ox"></canvas></div>
+  </div>
+  <script>
+function drawGraph(canvasId, x, y, seriesName, color) {
+  const ctx = document.getElementById(canvasId).getContext('2d');
+  ctx.canvas.height = parseInt(window.innerHeight * 0.6);
+  ctx.canvas.width = window.innerWith - 20;
+
+  const data = {
+    labels: x,
+    datasets: [{
+      data: y,
+      fill: false,
+      label: seriesName,
+      borderColor: color,
+      backgroundColor: color,
+      lineTension: 0,
+      pointRadius: emphisizeLastPoint,
+      borderWidth: 4,
+      pointHitRadius: 10
+    }]
+  };
+  const options = {
+    scales: {
+      xAxes: [{
+        type: 'time',
+        distribution: 'linear',
+        ticks: {
+          fontSize: 18,
+          source: 'data',
+          autoSkip: true,
+          maxTicksLimit: 30
+	}
+      }],
+      yAxes: [{
+        ticks: {
+          fontSize: 18,
+          beginAtZero: true
+        },
+        scaleLabel: {
+          fontSize: 18
+        }
+      }]
+    },
+    legend: {
+      display: false,
+    },
+    title: {
+      display: true,
+      text: seriesName,
+      fontSize: 24
+    },
+    layout: {
+      padding: {
+        top: 10,
+        bottom: 10,
+        left: 10,
+        right: 10
+      }
+    }
+  }
+  new Chart(ctx, {
+    type: 'line',
+    data: data,
+    options: options
+  });
+}
+
+function emphisizeLastPoint(context) {
+  if (context.dataIndex == context.dataset.data.length - 1) {
+    return 8;
+  } else {
+    return 0;
+  }
+}
+
+function dateStr() {
+  const now = new Date();
+  let nowStr = now.getFullYear() + '-';
+  if (now.getMonth() < 9) {
+    nowStr += '0';
+  }
+  nowStr += (now.getMonth() + 1) + '-'
+  if (now.getDate() < 10) {
+    nowStr += '0';
+  }
+  nowStr += now.getDate();
+  return nowStr;
+}
+
+
+$.ajax('/log?date=' + encodeURIComponent(dateStr())).done(data => {
+  const timeStamps = [];
+  const co2s = [];
+  const temperatures = [];
+  const humidities = [];
+
+  for (let row of data.split('\n')) {
+    const fields = row.trim().split(',');
+    if (fields.length != 4) {
+      continue;
+    }
+    timeStamps.push(fields[0]);
+    co2s.push(parseInt(fields[1]));
+    temperatures.push(parseInt(fields[2]));
+    humidities.push(parseInt(fields[3]));
+  }
+
+  drawGraph('co2', timeStamps, co2s, 'CO2濃度(ppm)', '#2F2F2F');
+  drawGraph('temperature', timeStamps, temperatures, '気温(℃)', '#FF6633');
+  drawGraph('humidity', timeStamps, humidities, '湿度(%)', '#3366FF');
+
+  const lastIndex = timeStamps.length - 1;
+  $('#latest-time').text(timeStamps[lastIndex]);
+  $('#latest-co2').text(co2s[lastIndex]);
+  $('#latest-temperature').text(temperatures[lastIndex]);
+  $('#latest-humidity').text(humidities[lastIndex]);
+});
+  </script>
+</body>
+</html>
