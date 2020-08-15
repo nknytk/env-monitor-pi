@@ -60,7 +60,7 @@ def main():
         values = mh_z19.read_all()
         humidity, temperature = Adafruit_DHT.read_retry(SENSOR, PIN)
 
-        co2_str = str(values.get('co2', 'failed')) if values else 'failed'
+        co2_str = str(values.get('co2', 'failed')) if isinstance(values, dict) else 'failed'
         temperature_str = 'failed' if temperature is None else str(int(temperature))
         humidity_str = 'failed' if humidity is None else str(int(humidity))
         time_text = datetime.now().strftime('%Y-%m-%d %H:%M:%S')

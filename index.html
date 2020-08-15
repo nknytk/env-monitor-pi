@@ -146,6 +146,9 @@ $.ajax('/log?date=' + encodeURIComponent(dateStr())).done(data => {
     if (fields.length != 4) {
       continue;
     }
+    if (fields[1] === "failed" || fields[2] === "failed" || fields[3] === "failed") {
+      continue;
+    }
     timeStamps.push(fields[0]);
     co2s.push(parseInt(fields[1]));
     temperatures.push(parseInt(fields[2]));
