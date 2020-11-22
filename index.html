@@ -87,6 +87,9 @@
 function drawGraph(divId, x, y, seriesName, color) {
   const graphContainer = $('#' + divId)
   graphContainer.empty()
+  if (x.length == 0) {
+    return
+  }
   const canvasId = 'canvas-' + divId
   $('<canvas>', {id: canvasId, class: 'graph', width: '100%', height: '700px'}).appendTo(graphContainer)
 
@@ -159,36 +162,40 @@ function dailyView(targetDate, updateHeader) {
   const logURL = 'log?date=' + encodeURIComponent(targetDate)
   $('#dlLink').attr('href', logURL + '&with_header=1')
   $.ajax(logURL).done(data => {
-    const timeStamps = []
-    const co2s = []
-    const temperatures = []
-    const humidities = []
+    const timeStamps = [[], [], []]
+    const values = [[], [], []]
 
     for (let row of data.split('\n')) {
       const fields = row.trim().split(',')
       if (fields.length != 4) {
         continue
       }
-      if (fields[1] === "failed" || fields[2] === "failed" || fields[3] === "failed") {
-        console.log(fields)
-        continue
+      for (let i = 1; i < 4; i++) {
+        if (fields[i] !== 'failed') {
+          timeStamps[i - 1].push(fields[0])
+          values[i - 1].push(parseInt(fields[i]))
+        }
       }
-      timeStamps.push(fields[0])
-      co2s.push(parseInt(fields[1]))
-      temperatures.push(parseInt(fields[2]))
-      humidities.push(parseInt(fields[3]))
     }
 
-    drawGraph('co2', timeStamps, co2s, 'CO2濃度(ppm)', '#2F2F2F')
-    drawGraph('temperature', timeStamps, temperatures, '気温(℃)', '#FF6633')
-    drawGraph('humidity', timeStamps, humidities, '湿度(%)', '#3366FF')
+    drawGraph('co2', timeStamps[0], values[0], 'CO2濃度(ppm)', '#2F2F2F')
+    drawGraph('temperature', timeStamps[1], values[1], '気温(℃)', '#FF6633')
+    drawGraph('humidity', timeStamps[2], values[2], '湿度(%)', '#3366FF')
 
     if (updateHeader) {
-      const lastIndex = timeStamps.length - 1
-      $('#latest-time').text(timeStamps[lastIndex])
-      $('#latest-co2').text(co2s[lastIndex])
-      $('#latest-temperature').text(temperatures[lastIndex])
-      $('#latest-humidity').text(humidities[lastIndex])
+      let latestTimestamp = '-'
+      const titles = ['co2', 'temperature', 'humidity']
+      for (let i = 0; i < 3; i++) {
+        if (values[i].length) {
+          $(`#latest-${titles[i]}`).text(values[i][values[i].length - 1])
+          if ((latestTimestamp == '-') || (latestTimestamp < timeStamps[i][timeStamps[i].length - 1])) {
+            latestTimestamp = timeStamps[i][timeStamps[i].length - 1]
+          }
+	} else {
+          $(`#latest-${titles[i]}`).text('-')
+        }
+      }
+      $('#latest-time').text(latestTimestamp)
     }
   })
 }
