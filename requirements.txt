@@ -1,0 +1,7 @@
+getrpimodel
+pyserial
+RPi.GPIO
+smbus-cffi
+Pillow
+waitress
+mh-z19
