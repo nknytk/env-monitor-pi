@@ -82,9 +82,10 @@
     <div class="row content-row" id="co2"></div>
     <div class="row content-row" id="temperature"></div>
     <div class="row content-row" id="humidity"></div>
+    <div class="row content-row" id="discomfort_index"></div>
   </div>
   <script>
-function drawGraph(divId, x, y, seriesName, color) {
+function drawGraph(divId, x, y, seriesName, color, plugins=[]) {
   const graphContainer = $('#' + divId)
   graphContainer.empty()
   if (x.length == 0) {
@@ -153,24 +154,51 @@ function drawGraph(divId, x, y, seriesName, color) {
   new Chart(ctx, {
     type: 'line',
     data: data,
-    options: options
+    options: options,
+    plugins: plugins
   })
 }
 
+function discomfortIndexBg(chart) {
+  const xScale = chart.scales['x-axis-0']
+  const yScale = chart.scales['y-axis-0']
+  const bgColors = [
+    {from: 85, to: 120, color: 'rgba(255, 0, 0, 0.5)'},  // 暑くてたまらない
+    {from: 80, to: 85, color: 'rgba(255, 0, 0, 0.4)'},   // 全員が不快に感じる
+    {from: 75, to: 80, color: 'rgba(255, 0, 0, 0.2)'},   // 半数以上が不快に感じる
+    {from: 70, to: 75, color: 'rgba(255, 0, 0, 0.1)'},   // 不快感を持つ人が出始める
+    {from: 55, to: 60, color: 'rgba(0, 0, 255, 0.1)'},   // 肌寒い
+    {from: 50, to: 55, color: 'rgba(0, 0, 255, 0.3)'},   // 寒い
+    {from: 0, to: 50, color: 'rgba(0, 0, 255, 0.5)'},    // 寒くてたまらない
+  ]
+  console.log(yScale)
+  bgColors.forEach(color => {
+    if (color.from < yScale.ticksAsNumbers[0]) {
+      const drawTo = Math.min(yScale.ticksAsNumbers[0], color.to)
+      chart.ctx.fillStyle = color.color
+      chart.ctx.fillRect(
+        xScale.left,
+        yScale.getPixelForValue(color.from),
+        xScale.width,
+        yScale.getPixelForValue(drawTo) - yScale.getPixelForValue(color.from)
+      )
+    }
+  })
+}
 
 function dailyView(targetDate, updateHeader) {
   const logURL = 'log?date=' + encodeURIComponent(targetDate)
   $('#dlLink').attr('href', logURL + '&with_header=1')
   $.ajax(logURL).done(data => {
-    const timeStamps = [[], [], []]
-    const values = [[], [], []]
+    const timeStamps = [[], [], [], []]
+    const values = [[], [], [], []]
 
     for (let row of data.split('\n')) {
       const fields = row.trim().split(',')
-      if (fields.length != 4) {
+      if (fields.length != 5) {
         continue
       }
-      for (let i = 1; i < 4; i++) {
+      for (let i = 1; i < 5; i++) {
         if (fields[i] !== 'failed') {
           timeStamps[i - 1].push(fields[0])
           values[i - 1].push(parseInt(fields[i]))
@@ -181,6 +209,7 @@ function dailyView(targetDate, updateHeader) {
     drawGraph('co2', timeStamps[0], values[0], 'CO2濃度(ppm)', '#2F2F2F')
     drawGraph('temperature', timeStamps[1], values[1], '気温(℃)', '#FF6633')
     drawGraph('humidity', timeStamps[2], values[2], '湿度(%)', '#3366FF')
+    drawGraph('discomfort_index', timeStamps[3], values[3], '不快指数', '#33DD33', [{beforeDraw: discomfortIndexBg}])
 
     if (updateHeader) {
       let latestTimestamp = '-'

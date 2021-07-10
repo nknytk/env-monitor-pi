@@ -43,7 +43,7 @@ def get_log(environ):
         with open(log_file, mode='rb') as fp:
             byte_content = fp.read()
         if qdic.get('with_header'):
-            byte_content = b'timestamp,co2(ppm),temperature(C),humidity(%)\n' + byte_content
+            byte_content = b'timestamp,co2(ppm),temperature(C),humidity(%),discomfort_index\n' + byte_content
         return '200 OK', byte_content, 'text/csv;charset="UTF-8"'
     else:
         byte_content = b'file not found'
@@ -95,10 +95,13 @@ def _summary(date_from, time_unit='hour'):
         'min_temperature': [],
         'max_humidity': [],
         'avg_humidity': [],
-        'min_humidity': []
+        'min_humidity': [],
+        'max_di': [],
+        'avg_di': [],
+        'min_di': []
     }
     key = ''
-    co2s, temperatures, humidities = [], [], []
+    co2s, temperatures, humidities, dis = [], [], [], []
     for valid_date in _list_dates():
         if valid_date < date_from:
             continue
@@ -106,11 +109,11 @@ def _summary(date_from, time_unit='hour'):
         file_path = os.path.join(app_root, 'log', valid_date + '.csv')
         with open(file_path) as fp:
             for row in fp:
-                timestamp, co2, temperature, humidity = row.strip().split(',')
+                timestamp, co2, temperature, humidity, di = row.strip().split(',')
                 timestamp = time_formatter(timestamp)
 
                 if timestamp != key:
-                    if co2s or temperatures or humidities:
+                    if key and (co2s or temperatures or humidities or di):
                         result['timestamp'].append(key)
                         if co2s:
                             result['max_co2'].append(max(co2s))
@@ -136,15 +139,26 @@ def _summary(date_from, time_unit='hour'):
                             result['max_humidity'].append(None)
                             result['min_humidity'].append(None)
                             result['avg_humidity'].append(None)
+                        if dis:
+                            result['max_di'].append(max(dis))
+                            result['min_di'].append(min(dis))
+                            result['avg_di'].append(round(sum(dis) / len(dis), 2))
+                        else:
+                            result['max_di'].append(None)
+                            result['min_di'].append(None)
+                            result['avg_di'].append(None)
+
                     key = timestamp
-                    co2s, temperatures, humidities = [], [], []
+                    co2s, temperatures, humidities, dis = [], [], [], []
 
                 if co2 != 'failed':
                     co2s.append(int(co2))
                 if temperature != 'failed':
-                    temperatures.append(int(temperature))
+                    temperatures.append(float(temperature))
                 if humidity != 'failed':
-                    humidities.append(int(humidity))
+                    humidities.append(float(humidity))
+                if di != 'failed':
+                    dis.append(float(di))
                     
     if co2s or temperatures or humidities:
         result['timestamp'].append(key)
@@ -172,5 +186,13 @@ def _summary(date_from, time_unit='hour'):
             result['max_humidity'].append(None)
             result['min_humidity'].append(None)
             result['avg_humidity'].append(None)
+        if dis:
+            result['max_di'].append(max(dis))
+            result['min_di'].append(min(dis))
+            result['avg_di'].append(round(sum(dis) / len(dis), 2))
+        else:
+            result['max_di'].append(None)
+            result['min_di'].append(None)
+            result['avg_di'].append(None)
 
     return result

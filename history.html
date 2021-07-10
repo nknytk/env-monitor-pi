@@ -38,6 +38,7 @@
           <option value="7" SELECTED>7日間</option>
           <option value="30">30日間</option>
           <option value="90">90日間</option>
+          <option value="180">180日間</option>
           <option value="365">365日間</option>
         </select>
       </div>
@@ -46,9 +47,10 @@
     <div class="row content-row" id="co2"></div>
     <div class="row content-row" id="temperature"></div>
     <div class="row content-row" id="humidity"></div>
+    <div class="row content-row" id="di"></div>
   </div>
   <script>
-function drawGraph(data, itemName, seriesName, color) {
+function drawGraph(data, itemName, seriesName, color, plugins=[]) {
   const graphContainer = $('#' + itemName)
   graphContainer.empty()
   const canvasId = 'canvas-' + itemName
@@ -139,7 +141,35 @@ function drawGraph(data, itemName, seriesName, color) {
   new Chart(ctx, {
     type: 'line',
     data: values,
-    options: options
+    options: options,
+    plugins: plugins
+  })
+}
+
+function discomfortIndexBg(chart) {
+  const xScale = chart.scales['x-axis-0']
+  const yScale = chart.scales['y-axis-0']
+  const bgColors = [
+    {from: 85, to: 120, color: 'rgba(255, 0, 0, 0.5)'},  // 暑くてたまらない
+    {from: 80, to: 85, color: 'rgba(255, 0, 0, 0.4)'},   // 全員が不快に感じる
+    {from: 75, to: 80, color: 'rgba(255, 0, 0, 0.2)'},   // 半数以上が不快に感じる
+    {from: 70, to: 75, color: 'rgba(255, 0, 0, 0.1)'},   // 不快感を持つ人が出始める
+    {from: 55, to: 60, color: 'rgba(0, 0, 255, 0.1)'},   // 肌寒い
+    {from: 50, to: 55, color: 'rgba(0, 0, 255, 0.3)'},   // 寒い
+    {from: 0, to: 50, color: 'rgba(0, 0, 255, 0.5)'},    // 寒くてたまらない
+  ]
+  console.log(yScale)
+  bgColors.forEach(color => {
+    if (color.from < yScale.ticksAsNumbers[0]) {
+      const drawTo = Math.min(yScale.ticksAsNumbers[0], color.to)
+      chart.ctx.fillStyle = color.color
+      chart.ctx.fillRect(
+        xScale.left,
+        yScale.getPixelForValue(color.from),
+        xScale.width,
+        yScale.getPixelForValue(drawTo) - yScale.getPixelForValue(color.from)
+      )
+    }
   })
 }
 
@@ -155,6 +185,7 @@ function drawSummary() {
     drawGraph(data, 'co2', 'CO2濃度(ppm)', '#2F2F2F')
     drawGraph(data, 'temperature', '気温(℃)', '#FF6633')
     drawGraph(data, 'humidity', '湿度(%)', '#3366FF')
+    drawGraph(data, 'di', '不快指数', '#33DD33', [{beforeDraw: discomfortIndexBg}])
     $.LoadingOverlay("hide")
   }).fail(e => {
     $.LoadingOverlay("hide")
