@@ -198,10 +198,14 @@ function dailyView(targetDate, updateHeader) {
       if (fields.length != 5) {
         continue
       }
-      for (let i = 1; i < 5; i++) {
+      if (fields[1] != 'failed') {
+        timeStamps[0].push(fields[0])
+        values[0].push(parseInt(fields[1]))
+      }
+      for (let i = 2; i < 5; i++) {
         if (fields[i] !== 'failed') {
           timeStamps[i - 1].push(fields[0])
-          values[i - 1].push(parseInt(fields[i]))
+          values[i - 1].push(parseFloat(fields[i]))
         }
       }
     }

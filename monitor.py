@@ -9,7 +9,7 @@ import mh_z19
 import pioled
 import Adafruit_DHT
 
-SENSOR = Adafruit_DHT.DHT11
+SENSOR = Adafruit_DHT.DHT22
 PIN = 23
 TARGET_INTERVAL = 60
 
@@ -27,7 +27,7 @@ def main():
 
         print(datetime.now().strftime('%Y-%m-%d %H:%M:%S') + ' read mh_z19')
         values = mh_z19.read_all()
-        print(datetime.now().strftime('%Y-%m-%d %H:%M:%S') + ' read DHT11')
+        print(datetime.now().strftime('%Y-%m-%d %H:%M:%S') + ' read DHT22')
         humidity, temperature = Adafruit_DHT.read_retry(SENSOR, PIN)
 
         co2_str = str(values.get('co2', 'failed')) if isinstance(values, dict) else 'failed'
