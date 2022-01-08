@@ -15,7 +15,7 @@ TARGET_INTERVAL = 60
 
 app_root = os.path.dirname(__file__)
 sys.path.append(app_root)
-import web
+import web, create_summary
 
 
 def main():
@@ -51,6 +51,8 @@ def main():
 
         log_text = '{},{},{},{},{}\n'.format(time_text, co2_str, temperature_str, humidity_str, di)
         logfile = 'log/{}.csv'.format(time_text.split(' ')[0])
+        if not os.path.exists(logfile):  # 日が切り替わったら前日分までのサマリを作成する
+            create_summary.daily_summary()
         print(datetime.now().strftime('%Y-%m-%d %H:%M:%S') + ' write csv')
         with open(logfile, mode='a') as fp:
             fp.write(log_text)

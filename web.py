@@ -64,12 +64,17 @@ def get_summary(environ):
     return '200 OK', content, 'application/json'
 
 
-def _list_dates():
+def _list_dates(date_from=None, date_to=None):
     valid_dates = []
     valid_file_pattern = re.compile('^202[0-9]-[01][0-9]-[0-3][0-9].csv$')
     for f in os.listdir(os.path.join(app_root, 'log')):
         if valid_file_pattern.match(f):
-            valid_dates.append(f.split('.')[0])
+            file_date = f.split('.')[0]
+            if date_from is not None and file_date < date_from:
+                continue
+            if date_to is not None and date_to > file_date:
+                continue
+            valid_dates.append(file_date)
     valid_dates.sort()
     return valid_dates
 
@@ -80,11 +85,6 @@ def _read_static(file_name):
 
 
 def _summary(date_from, time_unit='hour'):
-    if time_unit == 'hour':
-        time_formatter = lambda x: x[:14] + '00:00'
-    elif time_unit == 'day':
-        time_formatter = lambda x: x[:10]
-
     result = {
         'timestamp': [],
         'max_co2': [],
@@ -100,12 +100,24 @@ def _summary(date_from, time_unit='hour'):
         'avg_di': [],
         'min_di': []
     }
+
+    if time_unit == 'day':
+        time_formatter = lambda x: x[:10]
+        summary_file = os.path.join(app_root, 'log/daily_summary.json')
+        if os.path.exists(summary_file):
+            with open(summary_file) as fp:
+                result = json.load(fp)
+            while result['timestamp'][0] < date_from:
+                for key in result:
+                    del(result[key][0])
+            date_from = datetime.now().strftime('%Y-%m-%d')
+
+    elif time_unit == 'hour':
+        time_formatter = lambda x: x[:14] + '00:00'
+
     key = ''
     co2s, temperatures, humidities, dis = [], [], [], []
-    for valid_date in _list_dates():
-        if valid_date < date_from:
-            continue
-
+    for valid_date in _list_dates(date_from=date_from):
         file_path = os.path.join(app_root, 'log', valid_date + '.csv')
         with open(file_path) as fp:
             for row in fp:
