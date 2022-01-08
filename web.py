@@ -1,4 +1,4 @@
-from datetime import datetime
+from datetime import datetime, timedelta
 import json
 import re
 import os
@@ -110,7 +110,7 @@ def _summary(date_from, time_unit='hour'):
             while result['timestamp'][0] < date_from:
                 for key in result:
                     del(result[key][0])
-            date_from = datetime.now().strftime('%Y-%m-%d')
+            date_from = (datetime.strptime(result['timestamp'][-1], '%Y-%m-%d') + timedelta(days=1)).strftime('%Y-%m-%d')
 
     elif time_unit == 'hour':
         time_formatter = lambda x: x[:14] + '00:00'
